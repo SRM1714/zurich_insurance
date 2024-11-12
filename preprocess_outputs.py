@@ -2,7 +2,7 @@ import os
 import pandas as pd
 
 # Ruta del archivo CSV creado anteriormente para X
-x_df_path = './output/x_data.csv'  # Reemplaza con la ruta al archivo CSV de X
+x_df_path = './output/prepared_data.csv'  # Reemplaza con la ruta al archivo CSV de X
 
 # Cargar el archivo CSV de X como DataFrame
 x_df = pd.read_csv(x_df_path)
