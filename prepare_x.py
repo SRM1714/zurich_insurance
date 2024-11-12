@@ -2,12 +2,14 @@ import pandas as pd
 import json
 
 # Cargar el archivo CSV original
-df = pd.read_csv('output/x_data.csv')
+df = pd.read_csv('./output/x_data.csv')
 
-# Expansión de location_info y hazard
-def expand_row(row):
-    # Expansión de location_info
-    location_data = json.loads(row['location_info'])[0]  # Tomar la primera (y única) entrada de location_info
+# Expansión de los datos en location_info
+def expand_location_info(row):
+    # Convertir el string JSON de location_info en un diccionario de Python
+    location_data = json.loads(row['location_info'])[0]  # Solo tomamos el primer (y único) elemento de la lista
+    
+    # Agregar cada campo de location_info como una columna en la fila
     row['location_id'] = location_data.get('location_id', None)
     row['x'] = location_data.get('x', None)
     row['y'] = location_data.get('y', None)
@@ -21,26 +23,16 @@ def expand_row(row):
     row['country'] = location_data.get('country', None)
     row['state'] = location_data.get('state', None)
     
-    # Expansión de hazard (solo extraer valores "value" y asociarlos con "period")
-    hazard_data = json.loads(row['hazard'])['perils'][0]  # Extraer el primer elemento en perils
-    for loc in hazard_data['locations']:
-        for attribute in loc['attributes_rp']:
-            for rp in attribute['return_periods']:
-                period = rp['period']
-                value = rp['value']
-                # Crear una columna para cada período con el formato "period_{period}_value"
-                row[f'period_{period}_value'] = value
-    
     return row
 
-# Aplicar la función a cada fila en el DataFrame para expandir location_info y hazard
-df = df.apply(expand_row, axis=1)
+# Aplicar la función a cada fila en el DataFrame para expandir location_info
+df = df.apply(expand_location_info, axis=1)
 
-# Eliminar las columnas originales que ya hemos expandido
-df = df.drop(columns=['location_info', 'hazard'])
+# Eliminar la columna location_info ya que hemos extraído sus valores
+df = df.drop(columns=['location_info'])
 
 # Mostrar el DataFrame procesado para verificar
 print(df.head())
 
 # Guardar el DataFrame procesado en un nuevo archivo CSV
-df.to_csv('output/prepared_data_with_hazard.csv', index=False)
+df.to_csv('output/prepared_data.csv', index=False)
