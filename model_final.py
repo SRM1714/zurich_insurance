@@ -343,7 +343,7 @@ def main():
         # Calculate error
         Error = np.linalg.norm(targets_pred.reshape(-1) - targets_test.reshape(-1)) / np.linalg.norm(targets_test.reshape(-1)) * 100
 
-        print("Error from periods prediction:", Error)
+        print("Error on single location GR prediction:", Error)
 
         c = inputs_test[:, -1]
         vmin = c.min()
