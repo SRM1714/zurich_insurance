@@ -17,6 +17,7 @@ import GPy
 import multiprocessing as mp
 from tqdm import tqdm
 
+
 def plot(xs, ys, values, vmin,vmax,figname):
 
     plt.figure(figsize=(10, 8))
@@ -74,19 +75,48 @@ def get_periods(data, location_index):
                     print(f"Warning: 'attributes_rp' not found or not a list in location {location}")
     return periods_data
 
+# def process_result(result):
+#     target = result[2]  # Ground up loss
+#     location_idx = result[1].astype(int)  # Location ID
+#     accountid = result[0]  # Account ID
+#     data = read_json_inputs(accountid)
+#     location_dict = get_locations(data)[location_idx]
+#     hazards_dict = get_periods(data, location_idx)
+#     x = location_dict["x"]
+#     y = location_dict["y"]
+#     value = location_dict["bsum"]
+#     hazard_values = [float(hazards_dict[n]) for n in range(len(hazards_dict))]
+#     input = [x, y, value]
+#     return input, target, hazard_values
+
 def process_result(result):
     target = result[2]  # Ground up loss
     location_idx = result[1].astype(int)  # Location ID
     accountid = result[0]  # Account ID
+
+    # Read JSON data for the specified account
     data = read_json_inputs(accountid)
-    location_dict = get_locations(data)[location_idx]
+    
+    # Retrieve location information and hazard data for the specified location index
+    locations = get_locations(data)
+    location_dict = locations[location_idx]
     hazards_dict = get_periods(data, location_idx)
+
+    # Extract coordinates, value, and other location information
     x = location_dict["x"]
     y = location_dict["y"]
     value = location_dict["bsum"]
+
+    # Calculate hazard values and count of locations for the account
     hazard_values = [float(hazards_dict[n]) for n in range(len(hazards_dict))]
-    input = [x, y, value]
-    return input, target, hazard_values
+    location_count = len(locations)  # Total number of locations for this account
+
+    # Add location count to the input
+    input_data = [x, y, value, location_count]
+
+    # Return input data, target, and hazard values
+    return input_data, target, hazard_values
+
 
 def process_result2(result):
     target = result[2]  # Ground up loss
@@ -169,7 +199,6 @@ def main():
     inputs = np.array(inputs, dtype=float)
     targets = np.array(targets,dtype=float)
     hazards = np.array(hazards,dtype=float)
-
     print("Done processing results.")
 
     x0, x1 = -80.7, -80
@@ -178,6 +207,7 @@ def main():
     xs = inputs[:,0]
     ys = inputs[:,1]
     values = inputs[:,2]
+    num_locations = inputs[:,3]
     targets = targets[:]
     rel_targets = targets / values
 
@@ -186,13 +216,14 @@ def main():
     xs = xs[mask]
     ys = ys[mask]
     values = values[mask]
+    num_locations = num_locations[mask]
     rel_targets = rel_targets[mask]
     hazards = hazards[mask]
 
     plot(xs, ys, rel_targets, np.min(rel_targets), np.max(rel_targets), "Targets")
 
     # Prepare the data for training
-    X = np.column_stack((xs, ys, hazards))
+    X = np.column_stack((xs, ys, num_locations, hazards))
 
     print("X shape", X.shape)
 
@@ -238,7 +269,7 @@ def main():
     # Define the Gaussian Process model
     print('aaaaaaa')
     print(X_train[1])
-    kernel = GPy.kern.RBF(input_dim=9, variance=1, lengthscale=1)
+    kernel = GPy.kern.RBF(input_dim=10, variance=1, lengthscale=1)
     model = GPy.models.GPRegression(X_train[:,2:], np.log(y_train), kernel)
 
     print("Optimizing the model...")
